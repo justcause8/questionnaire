@@ -1,4 +1,3 @@
-using questionnaire.Models;
 using Microsoft.EntityFrameworkCore;
 using System.Globalization;
 
@@ -17,10 +16,10 @@ namespace questionnaire.Models
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
-            //var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-            //IServiceCollection serviceCollection = builder.Services.AddDbContext<QuestionnaireContext>(options => options.UseSqlServer(connectionString));
+            var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+            IServiceCollection serviceCollection = builder.Services.AddDbContext<questionnaireContext>(options => options.UseSqlServer(connectionString));
 
-            builder.Services.AddDbContext<questionnaireContext>();
+            //builder.Services.AddDbContext<questionnaireContext>();
 
             var app = builder.Build();
 
