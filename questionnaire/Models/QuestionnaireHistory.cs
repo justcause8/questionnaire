@@ -13,7 +13,7 @@ public partial class QuestionnaireHistory
 
     public string Status { get; set; } = null!;
 
-    public DateTime CompletedAt { get; set; }
+    public DateTime? CompletedAt { get; set; }
 
     public virtual Questionnaire Questionnaire { get; set; } = null!;
 

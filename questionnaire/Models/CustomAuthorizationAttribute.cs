@@ -10,11 +10,11 @@ public class CustomAuthorizationAttribute : Attribute, IAsyncAuthorizationFilter
 {
     public async Task OnAuthorizationAsync(AuthorizationFilterContext context)
     {
-        var httpContext = context.HttpContext;
-        var principal = httpContext.User;
+        var httpsContext = context.HttpContext;
+        var principal = httpsContext.User;
 
         // Получаем токен из заголовка Authorization
-        var token = httpContext.Request.Headers["Authorization"].FirstOrDefault()?.Split(" ").Last();
+        var token = httpsContext.Request.Headers.Authorization.FirstOrDefault()?.Split(" ").Last();
 
         if (token == null)
         {
@@ -46,8 +46,8 @@ public class CustomAuthorizationAttribute : Attribute, IAsyncAuthorizationFilter
                 return;
             }
 
-            // Добавляем ID пользователя в контекст HTTP
-            httpContext.Items["userId"] = userId;
+            // Добавляем ID пользователя в контекст HTTPS
+            httpsContext.Items["userId"] = userId;
         }
         catch (Exception)
         {

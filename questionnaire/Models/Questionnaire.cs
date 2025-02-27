@@ -9,8 +9,6 @@ public partial class Questionnaire
 
     public int TypeQuestionnaireId { get; set; }
 
-    public int DesignId { get; set; }
-
     public int UserId { get; set; }
 
     public string Title { get; set; } = null!;
@@ -19,7 +17,7 @@ public partial class Questionnaire
 
     public bool IsPublished { get; set; }
 
-    public virtual Design Design { get; set; } = null!;
+    public virtual ICollection<Anonymou> Anonymous { get; set; } = new List<Anonymou>();
 
     public virtual ICollection<QuestionnaireHistory> QuestionnaireHistories { get; set; } = new List<QuestionnaireHistory>();
 

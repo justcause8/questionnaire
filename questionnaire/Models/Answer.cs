@@ -13,7 +13,7 @@ public partial class Answer
 
     public string Text { get; set; } = null!;
 
-    public int SelectOption { get; set; }
+    public int? SelectOption { get; set; }
 
     public DateTime CreatedAt { get; set; }
 
