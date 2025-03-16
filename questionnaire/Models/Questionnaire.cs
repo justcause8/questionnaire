@@ -17,8 +17,6 @@ public partial class Questionnaire
 
     public bool IsPublished { get; set; }
 
-    public virtual ICollection<Anonymou> Anonymous { get; set; } = new List<Anonymou>();
-
     public virtual ICollection<QuestionnaireHistory> QuestionnaireHistories { get; set; } = new List<QuestionnaireHistory>();
 
     public virtual ICollection<Question> Questions { get; set; } = new List<Question>();

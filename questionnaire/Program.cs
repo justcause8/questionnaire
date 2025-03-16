@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.EntityFrameworkCore;
 using questionnaire.Models;
+using questionnaire.Authentication;
+using questionnaire.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -37,7 +39,24 @@ builder.Services.AddAuthorization();
 
 // Настройка DbContext
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-builder.Services.AddDbContext<QuestionnaireContext>(options => options.UseSqlServer(connectionString));
+if (string.IsNullOrEmpty(connectionString))
+{
+    throw new InvalidOperationException("Строка подключения 'DefaultConnection' не найдена.");
+}
+
+builder.Services.AddDbContext<QuestionnaireContext>(options =>
+    options.UseSqlServer(connectionString));
+
+// Регистрация сервисов
+builder.Services.AddSingleton<TokenService>(provider =>
+{
+    return new TokenService(
+        jwtKey: AuthOptions.KEY,
+        issuer: AuthOptions.ISSUER,
+        audience: AuthOptions.AUDIENCE,
+        lifetimeMinutes: AuthOptions.LIFETIME
+    );
+});
 
 // Создаем приложение
 var app = builder.Build();
@@ -56,9 +75,6 @@ app.MapControllers();
 
 // Запускаем приложение
 app.Run();
-
-
-
 
 
 

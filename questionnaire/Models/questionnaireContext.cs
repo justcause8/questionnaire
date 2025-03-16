@@ -22,6 +22,7 @@ public partial class QuestionnaireContext : DbContext
     public virtual DbSet<Answer> Answers { get; set; }
 
     public virtual DbSet<Question> Questions { get; set; }
+    public virtual DbSet<QuestionOption> Options { get; set; }
 
     public virtual DbSet<QuestionType> QuestionTypes { get; set; }
 
@@ -60,75 +61,108 @@ public partial class QuestionnaireContext : DbContext
             entity.HasKey(e => e.Id).HasName("PK__Anonymou__3213E83F1978D4C1");
 
             entity.HasIndex(e => e.Id, "UQ__Anonymou__3213E83E1D1C793D").IsUnique();
-
             entity.HasIndex(e => e.SessionId, "UQ__Anonymou__69B13FDD8723FC70").IsUnique();
 
-            entity.Property(e => e.Id).HasColumnName("id");
-            entity.Property(e => e.QuestionnaireId).HasColumnName("questionnaire_ID");
+            entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd(); // Автоматическая генерация значения для int
             entity.Property(e => e.SessionId)
-                .HasMaxLength(255)
-                .HasColumnName("session_id");
+                .HasColumnName("session_id")
+                .HasColumnType("uniqueidentifier") // Тип данных для GUID
+                .HasDefaultValueSql("NEWID()"); // Автоматическая генерация GUID
 
-            entity.HasOne(d => d.Questionnaire).WithMany(p => p.Anonymous)
-                .HasForeignKey(d => d.QuestionnaireId)
+            // Связь с ответами
+            entity.HasMany(d => d.Answers)
+                .WithOne(p => p.Anonymous)
+                .HasForeignKey(d => d.AnonymousId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("Anonymous_fk1");
+                .HasConstraintName("Answer_fk1");
         });
 
         modelBuilder.Entity<Answer>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__Answer__3213E83F3574F1FF");
-
             entity.ToTable("Answer");
 
-            entity.HasIndex(e => e.Id, "UQ__Answer__3213E83E552A32C1").IsUnique();
-
             entity.Property(e => e.Id).HasColumnName("id");
-            entity.Property(e => e.AnonymousId).HasColumnName("anonymous_ID");
-            entity.Property(e => e.CreatedAt)
-                .HasColumnType("datetime")
-                .HasColumnName("created_at");
+            entity.Property(e => e.AnonymousId).HasColumnName("anonymous_ID").IsRequired(false);
+            entity.Property(e => e.UserId).HasColumnName("user_ID").IsRequired(false);
             entity.Property(e => e.QuestionId).HasColumnName("question_ID");
             entity.Property(e => e.SelectOption).HasColumnName("select_option");
-            entity.Property(e => e.Text)
-                .HasMaxLength(255)
-                .HasColumnName("text");
+            entity.Property(e => e.Text).HasMaxLength(255).HasColumnName("text");
+            entity.Property(e => e.CreatedAt).HasColumnType("datetime").HasColumnName("created_at");
 
-            entity.HasOne(d => d.Anonymous).WithMany(p => p.Answers)
+            // Связь с анонимным пользователем
+            entity.HasOne(d => d.Anonymous)
+                .WithMany(p => p.Answers)
                 .HasForeignKey(d => d.AnonymousId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("Answer_fk1");
 
-            entity.HasOne(d => d.Question).WithMany(p => p.Answers)
+            // Связь с авторизованным пользователем
+            entity.HasOne(d => d.User)
+                .WithMany(p => p.Answers)
+                .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("Answer_fk3");
+
+            // Связь с вопросом
+            entity.HasOne(d => d.Question)
+                .WithMany(p => p.Answers)
                 .HasForeignKey(d => d.QuestionId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("Answer_fk2");
+
+            // Связь с вариантом ответа
+            entity.HasOne(d => d.QuestionOption)
+                .WithMany(p => p.Answers)
+                .HasForeignKey(d => d.SelectOption)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("Answer_QuestionOption_fk");
         });
 
+        // Настройка связи Question -> Questionnaire
         modelBuilder.Entity<Question>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__Question__3213E83F0FCDB0B0");
-
             entity.ToTable("Question");
-
-            entity.HasIndex(e => e.Id, "UQ__Question__3213E83E01BC641E").IsUnique();
 
             entity.Property(e => e.Id).HasColumnName("id");
             entity.Property(e => e.QuestionTypeId).HasColumnName("question_type_ID");
             entity.Property(e => e.QuestionnaireId).HasColumnName("questionnaire_ID");
-            entity.Property(e => e.Text)
-                .HasMaxLength(255)
-                .HasColumnName("text");
+            entity.Property(e => e.Text).HasMaxLength(255).HasColumnName("text");
 
-            entity.HasOne(d => d.QuestionType).WithMany(p => p.Questions)
+            // Связь с типом вопроса
+            entity.HasOne(d => d.QuestionType)
+                .WithMany(p => p.Questions)
                 .HasForeignKey(d => d.QuestionTypeId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("Question_fk1");
 
-            entity.HasOne(d => d.Questionnaire).WithMany(p => p.Questions)
+            // Связь с анкетой
+            entity.HasOne(d => d.Questionnaire)
+                .WithMany(p => p.Questions)
                 .HasForeignKey(d => d.QuestionnaireId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("Question_fk2");
+        });
+
+
+        // Настройка связи Question -> QuestionOption
+        modelBuilder.Entity<QuestionOption>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK_QuestionOption");
+            entity.ToTable("QuestionOption");
+
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.QuestionId).HasColumnName("question_ID");
+            entity.Property(e => e.OptionText).HasMaxLength(255).HasColumnName("option_text");
+            entity.Property(e => e.Order).HasColumnName("order");
+
+            // Связь с вопросом
+            entity.HasOne(d => d.Question)
+                .WithMany(p => p.Options)
+                .HasForeignKey(d => d.QuestionId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("QuestionOption_fk1");
         });
 
         modelBuilder.Entity<QuestionType>(entity =>

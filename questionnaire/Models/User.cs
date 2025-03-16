@@ -16,6 +16,7 @@ public partial class User
     public string PasswordHash { get; set; } = null!;
 
     public virtual AccessLevel AccessLevel { get; set; } = null!;
+    public virtual ICollection<Answer> Answers { get; set; } = new List<Answer>();
 
     public virtual ICollection<QuestionnaireHistory> QuestionnaireHistories { get; set; } = new List<QuestionnaireHistory>();
 

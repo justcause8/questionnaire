@@ -18,4 +18,6 @@ public partial class Question
     public virtual QuestionType QuestionType { get; set; } = null!;
 
     public virtual Questionnaire Questionnaire { get; set; } = null!;
+    public virtual ICollection<QuestionOption> Options { get; set; } = new List<QuestionOption>(); // Варианты ответов
+
 }

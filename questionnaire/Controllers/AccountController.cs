@@ -8,28 +8,32 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using System.Security.Cryptography;
+using questionnaire.DTOs;
+using questionnaire.Authentication;
+using questionnaire.Services;
 
 namespace questionnaire.Controllers
 {
-    // Обработка и получение токена для аутентификации пользователей
     [Route("auth")]
     public class AccountController : Controller
     {
         private readonly QuestionnaireContext _context;
+        private readonly TokenService _tokenService;
 
-        public AccountController(QuestionnaireContext context)
+        public AccountController(QuestionnaireContext context, TokenService tokenService)
         {
             _context = context;
+            _tokenService = tokenService;
         }
 
-        // Для регистрации пользователей доступ открыт для анонимов
+        // Регистрация пользователя
         [AllowAnonymous]
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] User model)
         {
             if (await _context.Users.AnyAsync(u => u.Username == model.Username || u.Email == model.Email))
             {
-                return BadRequest("Username or email is already taken.");
+                return BadRequest("Username или email уже заняты.");
             }
 
             var hasher = new PasswordHasher<User>();
@@ -38,39 +42,39 @@ namespace questionnaire.Controllers
                 Username = model.Username,
                 Email = model.Email,
                 PasswordHash = hasher.HashPassword(model, model.PasswordHash),
-                AccessLevelId = model.AccessLevelId > 0 ? model.AccessLevelId : 1 // Админ по умолчанию
+                AccessLevelId = model.AccessLevelId > 0 ? model.AccessLevelId : 2 // Админ по умолчанию
             };
 
-            _context.Users.Add(user);
+            await _context.Users.AddAsync(user);
             await _context.SaveChangesAsync();
 
             return Ok(new
             {
-                access_token = GenerateAccessToken(user)
+                access_token = _tokenService.GenerateAccessToken(user)
             });
         }
 
-        // Логин также доступен для анонимов
+        // Логин пользователя
         [AllowAnonymous]
         [HttpPost("login")]
-        public async Task<IActionResult> Login(string login, string password)
+        public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
-            var user = await _context.Users.SingleOrDefaultAsync(u => u.Username == login || u.Email == login);
+            var user = await _context.Users.SingleOrDefaultAsync(u => u.Username == request.Login || u.Email == request.Login);
             if (user == null)
             {
-                return BadRequest("Invalid username/email or password.");
+                return BadRequest("Неверный username/email или пароль.");
             }
 
             var hasher = new PasswordHasher<User>();
-            var verificationResult = hasher.VerifyHashedPassword(user, user.PasswordHash, password);
+            var verificationResult = hasher.VerifyHashedPassword(user, user.PasswordHash, request.Password);
 
             if (verificationResult == PasswordVerificationResult.Failed)
             {
-                return BadRequest("Invalid password.");
+                return BadRequest("Неверный пароль.");
             }
 
             // Генерация refresh-токена
-            var refreshToken = GenerateRefreshToken();
+            var refreshToken = _tokenService.GenerateRefreshToken();
 
             // Удаляем старый refresh-токен, если он есть
             var existingToken = await _context.Tokens.FirstOrDefaultAsync(t => t.UserId == user.Id);
@@ -87,17 +91,17 @@ namespace questionnaire.Controllers
                 RefreshTokenDatetime = DateTime.UtcNow.AddDays(7) // Refresh-токен на 7 дней
             };
 
-            _context.Tokens.Add(userToken);
+            await _context.Tokens.AddAsync(userToken);
             await _context.SaveChangesAsync();
 
             return Ok(new
             {
-                access_token = GenerateAccessToken(user),
+                access_token = _tokenService.GenerateAccessToken(user),
                 refresh_token = refreshToken
             });
         }
 
-        // Для выхода требуется авторизация
+        // Выход пользователя
         [Authorize]
         [HttpPost("logout")]
         public async Task<IActionResult> Logout()
@@ -106,7 +110,7 @@ namespace questionnaire.Controllers
             var userIdClaim = User.FindFirst(AuthOptions.UserIdClaimType)?.Value;
             if (userIdClaim == null)
             {
-                return Unauthorized(new { Message = "Invalid user." });
+                return Unauthorized(new { Message = "Неверный пользователь." });
             }
             int userId = int.Parse(userIdClaim);
 
@@ -114,48 +118,38 @@ namespace questionnaire.Controllers
             var userToken = await _context.Tokens.FirstOrDefaultAsync(t => t.UserId == userId);
             if (userToken == null)
             {
-                return BadRequest("No active refresh token found.");
+                return BadRequest("Не найдено активных refresh токенов.");
             }
 
             _context.Tokens.Remove(userToken);
             await _context.SaveChangesAsync();
 
-            return Ok(new { Message = "User logged out successfully." });
+            return Ok(new { Message = "Пользователь успешно вышел." });
         }
 
-        private string GenerateAccessToken(User user)
+        // Создание анонимного пользователя
+        [AllowAnonymous]
+        [HttpPost("create-anonymous")]
+        public async Task<IActionResult> CreateAnonymousUser()
         {
-            var identity = GetClaimsIdentity(user);
-            var now = DateTime.UtcNow;
+            // Генерация уникального SessionId
+            var sessionId = Guid.NewGuid();
 
-            var jwt = new JwtSecurityToken(
-                issuer: AuthOptions.ISSUER,
-                audience: AuthOptions.AUDIENCE,
-                notBefore: now,
-                claims: identity.Claims,
-                expires: now.Add(TimeSpan.FromMinutes(AuthOptions.LIFETIME)),
-                signingCredentials: new SigningCredentials(
-                    new SymmetricSecurityKey(Encoding.UTF8.GetBytes(AuthOptions.KEY)),
-                    SecurityAlgorithms.HmacSha256)
-            );
-
-            return new JwtSecurityTokenHandler().WriteToken(jwt);
-        }
-
-        private string GenerateRefreshToken()
-        {
-            return Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
-        }
-
-        private ClaimsIdentity GetClaimsIdentity(User user)
-        {
-            var claims = new List<Claim>
+            // Проверяем, существует ли уже анонимный пользователь с таким SessionId
+            var anonymousUser = await _context.Anonymous.FirstOrDefaultAsync(a => a.SessionId == sessionId);
+            if (anonymousUser == null)
             {
-                new Claim(ClaimsIdentity.DefaultNameClaimType, user.Username ?? user.Email),
-                new Claim(AuthOptions.UserIdClaimType, user.Id.ToString())
-            };
+                // Создаем нового анонимного пользователя
+                anonymousUser = new Anonymou
+                {
+                    SessionId = sessionId
+                };
 
-            return new ClaimsIdentity(claims, "Token", ClaimsIdentity.DefaultNameClaimType, ClaimsIdentity.DefaultRoleClaimType);
+                await _context.Anonymous.AddAsync(anonymousUser); // Используем AddAsync
+                await _context.SaveChangesAsync();
+            }
+
+            return Ok(new { message = "Анонимный пользователь создан.", sessionId = anonymousUser.SessionId });
         }
     }
 }
