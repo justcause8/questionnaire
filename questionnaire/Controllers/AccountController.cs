@@ -54,6 +54,31 @@ namespace questionnaire.Controllers
             });
         }
 
+        // Создание анонимного пользователя
+        [AllowAnonymous]
+        [HttpPost("create-anonymous")]
+        public async Task<IActionResult> CreateAnonymousUser()
+        {
+            // Генерация уникального SessionId
+            var sessionId = Guid.NewGuid();
+
+            // Проверяем, существует ли уже анонимный пользователь с таким SessionId
+            var anonymousUser = await _context.Anonymous.FirstOrDefaultAsync(a => a.SessionId == sessionId);
+            if (anonymousUser == null)
+            {
+                // Создаем нового анонимного пользователя
+                anonymousUser = new Anonymou
+                {
+                    SessionId = sessionId
+                };
+
+                await _context.Anonymous.AddAsync(anonymousUser); // Используем AddAsync
+                await _context.SaveChangesAsync();
+            }
+
+            return Ok(new { message = "Анонимный пользователь создан.", sessionId = anonymousUser.SessionId });
+        }
+
         // Логин пользователя
         [AllowAnonymous]
         [HttpPost("login")]
@@ -125,31 +150,6 @@ namespace questionnaire.Controllers
             await _context.SaveChangesAsync();
 
             return Ok(new { Message = "Пользователь успешно вышел." });
-        }
-
-        // Создание анонимного пользователя
-        [AllowAnonymous]
-        [HttpPost("create-anonymous")]
-        public async Task<IActionResult> CreateAnonymousUser()
-        {
-            // Генерация уникального SessionId
-            var sessionId = Guid.NewGuid();
-
-            // Проверяем, существует ли уже анонимный пользователь с таким SessionId
-            var anonymousUser = await _context.Anonymous.FirstOrDefaultAsync(a => a.SessionId == sessionId);
-            if (anonymousUser == null)
-            {
-                // Создаем нового анонимного пользователя
-                anonymousUser = new Anonymou
-                {
-                    SessionId = sessionId
-                };
-
-                await _context.Anonymous.AddAsync(anonymousUser); // Используем AddAsync
-                await _context.SaveChangesAsync();
-            }
-
-            return Ok(new { message = "Анонимный пользователь создан.", sessionId = anonymousUser.SessionId });
         }
     }
 }

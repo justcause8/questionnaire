@@ -4,10 +4,10 @@
     {
         public string? AnswerText { get; set; } // Текстовый ответ (для открытых вопросов)
 
-        public int? SelectedOption { get; set; } // Выбранный вариант ответа (для закрытых вопросов)
+        public int? AnswerClose { get; set; } // Выбранный вариант ответа (для закрытых вопросов)
 
-        public List<int>? SelectedOptions { get; set; } // Выбранные варианты ответа (для множественного выбора)
+        public List<int>? AnswerMultiple { get; set; } // Выбранные варианты ответа (для множественного выбора)
 
-        public int? ScaleValue { get; set; } // Значение шкалы (для шкальных вопросов)
+        public int? AnswerScale { get; set; } // Значение шкалы (для шкальных вопросов)
     }
 }
