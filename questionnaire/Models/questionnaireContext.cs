@@ -119,7 +119,6 @@ public partial class QuestionnaireContext : DbContext
                 .HasConstraintName("Answer_QuestionOption_fk");
         });
 
-        // Настройка связи Question -> Questionnaire
         modelBuilder.Entity<Question>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__Question__3213E83F0FCDB0B0");
@@ -197,6 +196,11 @@ public partial class QuestionnaireContext : DbContext
                 .HasColumnName("title");
             entity.Property(e => e.TypeQuestionnaireId).HasColumnName("type_questionnaire_ID");
             entity.Property(e => e.UserId).HasColumnName("user_ID");
+
+            entity.Property(e => e.AccessLinkToken)
+                .HasColumnName("access_link_token")
+                .HasColumnType("uniqueidentifier")
+                .HasDefaultValueSql("NEWID()");
 
             entity.HasOne(d => d.TypeQuestionnaire).WithMany(p => p.Questionnaires)
                 .HasForeignKey(d => d.TypeQuestionnaireId)

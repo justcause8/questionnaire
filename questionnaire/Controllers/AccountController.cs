@@ -7,7 +7,6 @@ using questionnaire.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
-using System.Security.Cryptography;
 using questionnaire.DTOs;
 using questionnaire.Authentication;
 using questionnaire.Services;
@@ -31,9 +30,9 @@ namespace questionnaire.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] User model)
         {
-            if (await _context.Users.AnyAsync(u => u.Username == model.Username || u.Email == model.Email))
+            if (await _context.Users.AnyAsync(u => u.Email == model.Email))
             {
-                return BadRequest("Username или email уже заняты.");
+                return BadRequest("Email уже занят.");
             }
 
             var hasher = new PasswordHasher<User>();

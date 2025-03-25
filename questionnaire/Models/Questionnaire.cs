@@ -16,6 +16,7 @@ public partial class Questionnaire
     public DateTime CreatedAt { get; set; }
 
     public bool IsPublished { get; set; }
+    public Guid AccessLinkToken { get; set; }
 
     public virtual ICollection<QuestionnaireHistory> QuestionnaireHistories { get; set; } = new List<QuestionnaireHistory>();
 
